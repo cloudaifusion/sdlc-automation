@@ -25,7 +25,7 @@ on:
 jobs:
   architecture-review:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -79,7 +79,7 @@ jobs:
 
           for attempt in 1 2 3; do
             echo "Claude attempt $attempt..."
-            INIT_RESPONSE=$(claude -p "$(cat initial_prompt.txt)" --output-format text --dangerously-skip-permissions 2>&1) || true
+            INIT_RESPONSE=$(claude -p "$(cat initial_prompt.txt)" --output-format text --max-turns 20 --dangerously-skip-permissions 2>&1) || true
             if echo "$INIT_RESPONSE" | grep -qi "credit\|billing\|unauthorized\|invalid.*key"; then
               echo "Fatal error — credits or auth issue:"
               echo "$INIT_RESPONSE"
@@ -182,7 +182,7 @@ jobs:
 
           for attempt in 1 2 3; do
             echo "Claude attempt $attempt..."
-            RESPONSE=$(claude -p "$(cat prompt.txt)" --output-format text --dangerously-skip-permissions 2>&1) || true
+            RESPONSE=$(claude -p "$(cat prompt.txt)" --output-format text --max-turns 20 --dangerously-skip-permissions 2>&1) || true
             if echo "$RESPONSE" | grep -qi "rate_limit_error\|rate limit"; then
               if [[ $attempt -lt 3 ]]; then
                 echo "Rate limited, waiting 60s before retry..."
