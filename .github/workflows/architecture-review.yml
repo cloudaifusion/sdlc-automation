@@ -118,8 +118,12 @@ jobs:
             echo "Write the updated diagram to ${DRAWIO_FILE}"
             echo "Write the updated companion guide to ${GUIDE_FILE}"
             echo ""
-            echo "In your PR review summary, wrap any architecture risks or warnings between ### RISKS_START and ### RISKS_END markers."
-            echo "If there are no risks, omit those markers entirely."
+            echo "For your PR review summary:"
+            echo "- Do NOT include any narration about writing files (e.g. 'Both files are written', 'Here is the summary', '---' separators)"
+            echo "- Start directly with the summary content"
+            echo "- Include a Risk column in the resource table (values: HIGH / MEDIUM / LOW / none)"
+            echo "- If there are HIGH or MEDIUM risks, wrap a consolidated risks block between ### RISKS_START and ### RISKS_END"
+            echo "- If there are no HIGH or MEDIUM risks, omit the RISKS markers entirely"
           } > prompt.txt
 
           RESPONSE=$(claude -p "$(cat prompt.txt)" --output-format text --dangerously-skip-permissions 2>&1) || true
@@ -143,8 +147,13 @@ jobs:
           # Extract risks block if present
           RISKS=$(echo "$RESPONSE" | sed -n '/### RISKS_START/,/### RISKS_END/p' | sed '1d;$d')
 
-          # Strip risks markers from main response for clean display
-          CLEAN_RESPONSE=$(echo "$RESPONSE" | sed '/### RISKS_START/,/### RISKS_END/d')
+          # Strip risks markers and any leading Claude narration lines
+          CLEAN_RESPONSE=$(echo "$RESPONSE" \
+            | sed '/### RISKS_START/,/### RISKS_END/d' \
+            | sed '/^Both files are written/d' \
+            | sed '/^Here is the PR review/d' \
+            | sed '/^Here is the review/d' \
+            | sed '/^---$/d')
 
           # Compute diff stats from diff.json
           ADDED=$(jq '.resources_added_or_modified | length' diff.json)
@@ -214,6 +223,7 @@ jobs:
             const rawBase = `https://github.com/${owner}/${repo}/raw/${branch}`;
             const blobBase = `https://github.com/${owner}/${repo}/blob/${branch}`;
 
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
             const statsLine = `**${total} resource(s) changed** — ${added} added/modified, ${deleted} removed`;
 
             const risksSection = process.env.RISKS?.trim()
@@ -226,17 +236,13 @@ jobs:
               statsLine,
               risksSection,
               '',
-              '---',
-              '',
-              process.env.REVIEW_BODY,
+              process.env.REVIEW_BODY.trim(),
               '',
               '---',
-              '',
-              `**Updated diagram:**`,
               '',
               `![Architecture Diagram](${rawBase}/${docsPath}/${diagramName}.png)`,
               '',
-              `📖 [View companion guide](${blobBase}/${docsPath}/${diagramName}.md)`,
+              `📖 [View companion guide](${blobBase}/${docsPath}/${diagramName}.md) · 🔍 [View workflow run](${runUrl})`,
             ].join('\n');
 
             github.rest.issues.createComment({
