@@ -21,7 +21,7 @@ print(f"Diffing against: {base_ref}")
 def parse_resource_blocks(content):
     blocks = {}
     # Match resource "aws_type" "name" { ... } — handles nested braces
-    pattern = re.compile(r'resource\s+"(aws_[a-z_]+)"\s+"([^"]+)"\s*\{', re.MULTILINE)
+    pattern = re.compile(r'resource\s+"(aws_[a-z0-9_]+)"\s+"([^"]+)"\s*\{', re.MULTILINE)
     for match in pattern.finditer(content):
         resource_type = match.group(1)
         start = match.start()
