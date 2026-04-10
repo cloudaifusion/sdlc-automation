@@ -296,7 +296,8 @@ jobs:
           CLEAN_RESPONSE=$(echo "$RESPONSE" \
             | sed -n '/### SUMMARY_START/,$p' \
             | sed '1d' \
-            | sed '/### RISKS_START/,/### RISKS_END/d')
+            | sed '/### RISKS_START/,/### RISKS_END/d' \
+            | sed '/^### SUMMARY_END/d')
 
           # Compute diff stats from diff.json
           ADDED=$(jq '.resources_added_or_modified | length' diff.json)
