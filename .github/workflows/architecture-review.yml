@@ -86,13 +86,13 @@ jobs:
           XML=$(cat "$DRAWIO_FILE" 2>/dev/null || echo "")
           SUMMARY=$(cat "$GUIDE_FILE" 2>/dev/null || echo "")
 
-          echo "xml<<EOF" >> $GITHUB_OUTPUT
+          DELIM=$(uuidgen)
+          echo "xml<<${DELIM}" >> $GITHUB_OUTPUT
           echo "$XML" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo "${DELIM}" >> $GITHUB_OUTPUT
+          echo "summary<<${DELIM}" >> $GITHUB_OUTPUT
           echo "$SUMMARY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "${DELIM}" >> $GITHUB_OUTPUT
 
       - name: Call Claude for incremental review
         id: claude
@@ -144,12 +144,13 @@ jobs:
           ADDED=$(jq '.resources_added_or_modified | length' diff.json)
           DELETED=$(jq '.resources_deleted | length' diff.json)
 
-          echo "response<<EOF" >> $GITHUB_OUTPUT
+          DELIM=$(uuidgen)
+          echo "response<<${DELIM}" >> $GITHUB_OUTPUT
           echo "$CLEAN_RESPONSE" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          echo "risks<<EOF" >> $GITHUB_OUTPUT
+          echo "${DELIM}" >> $GITHUB_OUTPUT
+          echo "risks<<${DELIM}" >> $GITHUB_OUTPUT
           echo "$RISKS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "${DELIM}" >> $GITHUB_OUTPUT
           echo "added=$ADDED" >> $GITHUB_OUTPUT
           echo "deleted=$DELETED" >> $GITHUB_OUTPUT
 
