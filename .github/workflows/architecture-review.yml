@@ -1,0 +1,173 @@
+name: AWS Architecture Review
+
+on:
+  workflow_call:
+    inputs:
+      terraform_path:
+        description: 'Path to Terraform files (e.g. infra/terraform/aws)'
+        default: 'infra/terraform/aws'
+        required: false
+        type: string
+      docs_path:
+        description: 'Output folder for diagram and companion guide'
+        default: 'docs'
+        required: false
+        type: string
+      diagram_name:
+        description: 'Base filename for diagram files (without extension)'
+        default: 'architecture'
+        required: false
+        type: string
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: true
+
+jobs:
+  architecture-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up shared tools
+        run: |
+          git clone https://github.com/cloudaifusion/sdlc-automation.git /tmp/sdlc-automation
+          mkdir -p ~/.claude/skills
+          cp -r /tmp/sdlc-automation/.claude/skills/* ~/.claude/skills/
+          npm install -g @anthropic-ai/claude-code
+
+      - name: Generate Terraform diff
+        run: |
+          TERRAFORM_PATH="${{ inputs.terraform_path }}" python3 /tmp/sdlc-automation/scripts/get_diff.py
+          cat diff.json
+
+      - name: Generate initial diagram if missing
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
+          GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
+
+          if [[ -f "$DRAWIO_FILE" ]]; then
+            echo "Diagram already exists, skipping initial generation."
+            exit 0
+          fi
+
+          echo "No diagram found — generating initial diagram from Terraform files."
+          mkdir -p "${{ inputs.docs_path }}"
+
+          {
+            echo "/aws-architecture-diagram"
+            echo "Generate an AWS architecture diagram from the following Terraform files."
+            echo "Write the diagram to ${DRAWIO_FILE} and the companion guide to ${GUIDE_FILE}"
+            echo ""
+            echo "Terraform files:"
+            find "${{ inputs.terraform_path }}" -name "*.tf" | sort | while read f; do
+              echo "=== $f ==="
+              cat "$f"
+              echo ""
+            done
+          } > initial_prompt.txt
+
+          claude -p "$(cat initial_prompt.txt)" --output-format text --dangerously-skip-permissions
+          rm initial_prompt.txt
+
+      - name: Read existing diagram & summary
+        id: read_files
+        run: |
+          DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
+          GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
+
+          XML=$(cat "$DRAWIO_FILE" 2>/dev/null || echo "")
+          SUMMARY=$(cat "$GUIDE_FILE" 2>/dev/null || echo "")
+
+          echo "xml<<EOF" >> $GITHUB_OUTPUT
+          echo "$XML" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Call Claude for incremental review
+        id: claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DIAGRAM_XML: ${{ steps.read_files.outputs.xml }}
+          DIAGRAM_SUMMARY: ${{ steps.read_files.outputs.summary }}
+        run: |
+          DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
+          GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
+
+          {
+            echo "/aws-architecture-review"
+            echo "Diff JSON:"
+            cat diff.json
+            echo ""
+            echo "Existing diagram XML:"
+            echo "${DIAGRAM_XML}"
+            echo ""
+            echo "Existing summary:"
+            echo "${DIAGRAM_SUMMARY}"
+            echo ""
+            echo "Write the updated diagram to ${DRAWIO_FILE}"
+            echo "Write the updated companion guide to ${GUIDE_FILE}"
+          } > prompt.txt
+
+          RESPONSE=$(claude -p "$(cat prompt.txt)" --output-format text --dangerously-skip-permissions)
+
+          if [[ -z "$RESPONSE" ]]; then
+            echo "Claude returned empty response"
+            exit 1
+          fi
+
+          echo "$RESPONSE" > review-output.txt
+          echo "=== Claude Response ==="
+          echo "$RESPONSE"
+          echo "=== End Claude Response ==="
+
+          echo "response<<EOF" >> $GITHUB_OUTPUT
+          echo "$RESPONSE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Export diagram to PNG
+        run: |
+          sudo apt-get install -y xvfb libgbm1 libasound2t64 libnotify4 libsecret-1-0
+          DRAWIO_VERSION="24.7.17"
+          wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb"
+          sudo dpkg -i "drawio-amd64-${DRAWIO_VERSION}.deb" || sudo apt-get install -f -y
+          xvfb-run -a drawio --export --format png \
+            --output "${{ inputs.docs_path }}/${{ inputs.diagram_name }}.png" \
+            --no-sandbox "${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
+
+      - name: Commit updated diagram and review
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add \
+            "${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio" \
+            "${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md" \
+            "${{ inputs.docs_path }}/${{ inputs.diagram_name }}.png" \
+            review-output.txt
+          git commit -m "Auto-update AWS diagram via architecture-review skill" || echo "No changes to commit"
+          git push
+
+      - name: Post PR comment
+        uses: actions/github-script@v7
+        env:
+          REVIEW_BODY: ${{ steps.claude.outputs.response }}
+        with:
+          script: |
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: `## 🏗️ AWS Architecture Review\n\n${process.env.REVIEW_BODY}`
+            })

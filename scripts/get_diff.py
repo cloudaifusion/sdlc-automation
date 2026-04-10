@@ -4,8 +4,8 @@ import re
 import json
 import subprocess
 
-# Folder containing Terraform files
-TERRAFORM_FOLDER = "infra/terraform/aws"
+# Folder containing Terraform files — override via TERRAFORM_PATH env var
+TERRAFORM_FOLDER = os.environ.get("TERRAFORM_PATH", "infra/terraform/aws")
 
 # Determine base ref: use GITHUB_BASE_REF in CI, fall back to main locally
 base_branch = os.environ.get("GITHUB_BASE_REF", "main")
