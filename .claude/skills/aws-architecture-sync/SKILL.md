@@ -39,15 +39,15 @@ The diagram skill will apply the changes and regenerate both:
 
 ### 3. Return PR review summary
 
-After the diagram skill completes, output the PR summary using EXACTLY this format:
-
-1. If there are HIGH or MEDIUM risks, output them first wrapped between `### RISKS_START` and `### RISKS_END`
-2. Then output `### SUMMARY_START` on its own line
-3. Then the summary content — no preamble, no narration, no file confirmation lines
-
-Output the summary using EXACTLY this template (omit any section that has no rows):
+After the diagram skill completes, output the PR summary using EXACTLY this template (omit any section that has no rows):
 
 ```
+### RISKS_START
+- **[HIGH] Example risk title** — explanation and remediation
+### RISKS_END
+
+### SUMMARY_START
+
 ## Resources modified (in-place)
 
 | Service | Role | Change | Risk |
@@ -66,6 +66,8 @@ Output the summary using EXACTLY this template (omit any section that has no row
 |---|---|---|---|
 | **WAFv2 Web ACL** | L7 filtering (SQLi, XSS, rate-limiting) for the ALB | Deleted with no replacement | HIGH |
 ```
+
+If there are no HIGH or MEDIUM risks, omit the `### RISKS_START` / `### RISKS_END` block entirely.
 
 Rules:
 - **Role** = what the service does in this architecture — never the change description
