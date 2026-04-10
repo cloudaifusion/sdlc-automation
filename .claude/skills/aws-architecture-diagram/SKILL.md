@@ -49,10 +49,9 @@ Used when called by the `aws-architecture-sync` skill with an existing diagram a
 - Identify which AWS services are needed
 - Determine the architecture pattern (three-tier, event-driven, data pipeline, RAG, etc.)
 - **Assess the audience**: technical (detailed labels, protocol names) vs non-technical (step numbers, simplified descriptions)
-- **If running interactively**, ask the user (using AskUserQuestion) for:
-  - **Language**: English or 日本語 for all labels, titles, and the companion guide
-  - Any other preferences not already clear from the request
-- **If running in CI** (prompt contains "CI environment" or "do not ask questions"): skip all questions, use English, apply sensible defaults
+- **Always use English** for all labels, titles, and the companion guide
+- **If running interactively**, ask the user (using AskUserQuestion) for any preferences not already clear from the request
+- **If running in CI** (prompt contains "CI environment" or "do not ask questions"): skip all questions, apply sensible defaults
 
 ### 2. Look up icons
 
@@ -132,7 +131,7 @@ Choose a **descriptive kebab-case slug** that best describes the diagram content
   - **Data flows**: Step-by-step explanation of each flow (matching the step numbers in the diagram if using Non-Technical Audience Mode)
   - **Key design decisions**: Brief notes on architectural choices (e.g., why serverless, why this database, why this region setup)
   - **Cost/scaling notes** (optional): Anything helpful for planning — e.g., "Lambda scales automatically", "OpenSearch Serverless has a minimum baseline cost"
-- Write the guide in the same language the user chose for the diagram
+- Write the guide in English
 - Tell the user both file paths and suggest opening the `.drawio` in Draw.io to verify
 
 ## Rules
@@ -141,7 +140,7 @@ Choose a **descriptive kebab-case slug** that best describes the diagram content
 2. **Use `strokeColor=#ffffff`** for all resourceIcon patterns (service-level icons)
 3. **Use `strokeColor=none`** for all dedicated shapes (resource-level icons)
 4. **Match fillColor to category** — never mix colors across categories
-5. **Ask the user for language** (English or 日本語) — use consistently across diagram labels, titles, legend, and companion guide
+5. **Always use English** — all diagram labels, titles, legend, and companion guide must be in English
 6. **No HTML in labels** — plain text only
 7. **Max 15-20 icons** per diagram for readability
 8. **Edge color**: `#545B64` (AWS default gray)
@@ -161,13 +160,13 @@ Replace technical labels (HTTPS, REST API, etc.) with circled step numbers:
 - Use different circle styles per flow for visual distinction
 
 ### Simplified labels
-- Use plain Japanese descriptions instead of technical terms
-- Examples: "チケット取得" not "REST API call", "AI学習用に変換" not "チャンク分割・埋め込み", "検索データベース" not "k-NNベクトルインデックス"
-- Drop technical qualifiers: "OpenSearch" not "OpenSearch Serverless", "VPN接続" not "Site-to-Site VPN"
+- Use plain English descriptions instead of technical terms
+- Examples: "Get ticket" not "REST API call", "Convert for AI" not "chunk + embed", "Search database" not "k-NN vector index"
+- Drop technical qualifiers: "OpenSearch" not "OpenSearch Serverless", "VPN" not "Site-to-Site VPN"
 
 ### Lane layout with flow summaries
 When a diagram has multiple flows (e.g., data processing + search), use swim lanes:
-- Add a step-by-step summary in each lane header: e.g., `"① チケット取得 → ② データ保存 → ③ AI変換 → ④ 索引化"`
+- Add a step-by-step summary in each lane header: e.g., `"① Get ticket → ② Store data → ③ AI convert → ④ Index"`
 - Use a dashed vertical line to separate lanes instead of separate colored blocks
 - Place the legend outside colored lanes for visibility
 
