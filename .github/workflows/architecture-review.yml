@@ -38,17 +38,41 @@ jobs:
           ref: ${{ github.head_ref || github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Cache drawio .deb
+        id: cache-drawio
+        uses: actions/cache@v4
+        with:
+          path: drawio-amd64-24.7.17.deb
+          key: drawio-24.7.17
+
+      - name: Cache Claude Code CLI
+        id: cache-claude
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/lib/node_modules/@anthropic-ai
+          key: claude-code-${{ runner.os }}-latest
+
       - name: Set up shared tools
         run: |
           git clone https://github.com/cloudaifusion/sdlc-automation.git /tmp/sdlc-automation
           mkdir -p ~/.claude/skills
           cp -r /tmp/sdlc-automation/.claude/skills/* ~/.claude/skills/
-          npm install -g @anthropic-ai/claude-code
+          if [[ "${{ steps.cache-claude.outputs.cache-hit }}" != "true" ]]; then
+            npm install -g @anthropic-ai/claude-code
+          fi
 
       - name: Generate Terraform diff
+        id: diff
         run: |
           TERRAFORM_PATH="${{ inputs.terraform_path }}" python3 /tmp/sdlc-automation/scripts/get_diff.py
           cat diff.json
+          ADDED=$(jq '.resources_added_or_modified | length' diff.json)
+          DELETED=$(jq '.resources_deleted | length' diff.json)
+          if [[ "$ADDED" -eq 0 && "$DELETED" -eq 0 ]]; then
+            echo "no_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "no_changes=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Generate initial diagram if missing
         id: initial
@@ -140,6 +164,7 @@ jobs:
 
       - name: Read existing diagram & summary
         id: read_files
+        if: steps.initial.outputs.generated != 'true' && steps.diff.outputs.no_changes != 'true'
         run: |
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
@@ -157,7 +182,7 @@ jobs:
 
       - name: Call Claude for incremental review
         id: claude
-        if: steps.initial.outputs.generated != 'true'
+        if: steps.initial.outputs.generated != 'true' && steps.diff.outputs.no_changes != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           DIAGRAM_XML: ${{ steps.read_files.outputs.xml }}
@@ -165,6 +190,17 @@ jobs:
         run: |
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
+
+          REFS_DIR="/tmp/sdlc-automation/.claude/skills/aws-architecture-diagram/references"
+          DIFF_RESOURCES=$(jq -r '.resources_added_or_modified[]' diff.json 2>/dev/null || echo "")
+          REFS="common"
+          echo "$DIFF_RESOURCES" | grep -q 'aws_\(instance\|lambda\|ecs\|eks\|lb\|alb\|nlb\|autoscaling\|batch\)' && REFS="$REFS compute"
+          echo "$DIFF_RESOURCES" | grep -q 'aws_\(s3\|rds\|db_\|dynamodb\|elasticache\|ebs\|efs\|fsx\|backup\)' && REFS="$REFS storage-database"
+          echo "$DIFF_RESOURCES" | grep -q 'aws_\(vpc\|subnet\|route\|cloudfront\|api_gateway\|apigatewayv2\|nat\|internet_gateway\|security_group\|network\)' && REFS="$REFS networking"
+          echo "$DIFF_RESOURCES" | grep -q 'aws_\(sns\|sqs\|eventbridge\|cloudwatch\|sfn\|scheduler\|pipes\|cloudformation\)' && REFS="$REFS app-integration"
+          echo "$DIFF_RESOURCES" | grep -q 'aws_\(athena\|glue\|kinesis\|opensearch\|bedrock\|sagemaker\|emr\|redshift\)' && REFS="$REFS analytics-ml"
+          echo "$DIFF_RESOURCES" | grep -q 'aws_\(iam\|cognito\|waf\|shield\|kms\|guardduty\|acm\|secretsmanager\|ssm\)' && REFS="$REFS security"
+          echo "Icon reference categories for incremental review: $REFS"
 
           {
             echo "/aws-architecture-sync"
@@ -180,6 +216,17 @@ jobs:
             echo "=== BEGIN DATA: Existing summary ==="
             echo "${DIAGRAM_SUMMARY}"
             echo "=== END DATA: Existing summary ==="
+            echo ""
+            echo "Icon reference data for any new resources (pre-loaded — do NOT read reference files):"
+            for ref in $REFS; do
+              echo "=== BEGIN DATA: aws-icons-${ref} ==="
+              cat "${REFS_DIR}/aws-icons-${ref}.md"
+              echo "=== END DATA: aws-icons-${ref} ==="
+              echo ""
+            done
+            echo "IMPORTANT: All icon reference data is pre-loaded above. When invoking /aws-architecture-diagram in update mode, instruct it:"
+            echo "  - Do NOT read any reference files — all needed icon data is already in context"
+            echo "  - Use only the icon shapes provided in the pre-loaded data above"
             echo ""
             echo "Write the updated diagram to ${DRAWIO_FILE}"
             echo "Write the updated companion guide to ${GUIDE_FILE}"
@@ -221,7 +268,7 @@ jobs:
 
           for attempt in 1 2 3; do
             echo "Claude attempt $attempt..."
-            RESPONSE=$(claude -p "$(cat prompt.txt)" --output-format text --max-turns 20 --dangerously-skip-permissions 2>&1) || true
+            RESPONSE=$(claude -p "$(cat prompt.txt)" --model claude-haiku-4-5-20251001 --output-format text --max-turns 20 --dangerously-skip-permissions 2>&1) || true
             if echo "$RESPONSE" | grep -qi "rate_limit_error\|rate limit"; then
               if [[ $attempt -lt 3 ]]; then
                 echo "Rate limited, waiting 60s before retry..."
@@ -278,7 +325,9 @@ jobs:
         run: |
           sudo apt-get install -y xvfb libgbm1 libasound2t64 libnotify4 libsecret-1-0
           DRAWIO_VERSION="24.7.17"
-          wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb"
+          if [[ ! -f "drawio-amd64-${DRAWIO_VERSION}.deb" ]]; then
+            wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb"
+          fi
           sudo dpkg -i "drawio-amd64-${DRAWIO_VERSION}.deb" || sudo apt-get install -f -y
           PNG_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.png"
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
@@ -346,8 +395,48 @@ jobs:
               body
             })
 
+      - name: Post no-changes PR comment
+        if: steps.initial.outputs.generated != 'true' && steps.diff.outputs.no_changes == 'true'
+        uses: actions/github-script@v7
+        env:
+          DOCS_PATH: ${{ inputs.docs_path }}
+          DIAGRAM_NAME: ${{ inputs.diagram_name }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        with:
+          script: |
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            if (!prNumber) { console.log('No PR number — skipping comment'); return; }
+
+            const docsPath = process.env.DOCS_PATH;
+            const diagramName = process.env.DIAGRAM_NAME;
+            const { owner, repo } = context.repo;
+            const branch = process.env.BRANCH;
+
+            const rawBase = `https://github.com/${owner}/${repo}/raw/${branch}`;
+            const blobBase = `https://github.com/${owner}/${repo}/blob/${branch}`;
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+
+            const body = [
+              '## 🏗️ AWS Architecture Review',
+              '',
+              '**No Terraform resource changes detected** — diagram and companion guide are current.',
+              '',
+              '---',
+              '',
+              `![Architecture Diagram](${rawBase}/${docsPath}/${diagramName}.png)`,
+              '',
+              `📖 [View companion guide](${blobBase}/${docsPath}/${diagramName}.md) · 🔍 [View workflow run](${runUrl})`,
+            ].join('\n');
+
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: prNumber,
+              body
+            })
+
       - name: Post PR comment
-        if: steps.initial.outputs.generated != 'true'
+        if: steps.initial.outputs.generated != 'true' && steps.diff.outputs.no_changes != 'true'
         uses: actions/github-script@v7
         env:
           REVIEW_BODY: ${{ steps.claude.outputs.response }}
