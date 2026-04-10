@@ -45,21 +45,12 @@ jobs:
           path: drawio-amd64-24.7.17.deb
           key: drawio-24.7.17
 
-      - name: Cache Claude Code CLI
-        id: cache-claude
-        uses: actions/cache@v4
-        with:
-          path: /usr/local/lib/node_modules/@anthropic-ai
-          key: claude-code-${{ runner.os }}-latest
-
       - name: Set up shared tools
         run: |
           git clone https://github.com/cloudaifusion/sdlc-automation.git /tmp/sdlc-automation
           mkdir -p ~/.claude/skills
           cp -r /tmp/sdlc-automation/.claude/skills/* ~/.claude/skills/
-          if [[ "${{ steps.cache-claude.outputs.cache-hit }}" != "true" ]]; then
-            npm install -g @anthropic-ai/claude-code
-          fi
+          npm install -g @anthropic-ai/claude-code
 
       - name: Generate Terraform diff
         id: diff
