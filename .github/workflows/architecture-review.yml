@@ -191,6 +191,11 @@ jobs:
             const total = added + deleted;
             const docsPath = process.env.DOCS_PATH;
             const diagramName = process.env.DIAGRAM_NAME;
+            const { owner, repo } = context.repo;
+            const branch = context.payload.pull_request.head.ref;
+
+            const rawBase = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}`;
+            const blobBase = `https://github.com/${owner}/${repo}/blob/${branch}`;
 
             const statsLine = `**${total} resource(s) changed** — ${added} added/modified, ${deleted} removed`;
 
@@ -212,9 +217,9 @@ jobs:
               '',
               `**Updated diagram:**`,
               '',
-              `![Architecture Diagram](${docsPath}/${diagramName}.png)`,
+              `![Architecture Diagram](${rawBase}/${docsPath}/${diagramName}.png)`,
               '',
-              `📖 [View companion guide](${docsPath}/${diagramName}.md)`,
+              `📖 [View companion guide](${blobBase}/${docsPath}/${diagramName}.md)`,
             ].join('\n');
 
             github.rest.issues.createComment({
