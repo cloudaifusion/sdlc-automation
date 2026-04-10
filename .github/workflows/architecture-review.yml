@@ -47,6 +47,7 @@ jobs:
           cat diff.json
 
       - name: Generate initial diagram if missing
+        id: initial
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -55,8 +56,11 @@ jobs:
 
           if [[ -f "$DRAWIO_FILE" ]]; then
             echo "Diagram already exists, skipping initial generation."
+            echo "generated=false" >> $GITHUB_OUTPUT
             exit 0
           fi
+
+          echo "generated=true" >> $GITHUB_OUTPUT
 
           echo "No diagram found — generating initial diagram from Terraform files."
           mkdir -p "${{ inputs.docs_path }}"
@@ -267,8 +271,45 @@ jobs:
           git commit -m "Auto-update AWS diagram via architecture-review skill" || echo "No changes to commit"
           git push
 
+      - name: Post initial diagram PR comment
+        if: github.event_name == 'pull_request' && steps.initial.outputs.generated == 'true'
+        uses: actions/github-script@v7
+        env:
+          DOCS_PATH: ${{ inputs.docs_path }}
+          DIAGRAM_NAME: ${{ inputs.diagram_name }}
+        with:
+          script: |
+            const docsPath = process.env.DOCS_PATH;
+            const diagramName = process.env.DIAGRAM_NAME;
+            const { owner, repo } = context.repo;
+            const branch = context.payload.pull_request.head.ref;
+
+            const rawBase = `https://github.com/${owner}/${repo}/raw/${branch}`;
+            const blobBase = `https://github.com/${owner}/${repo}/blob/${branch}`;
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+
+            const resourceCount = parseInt(process.env.ADDED) || 0;
+
+            const body = [
+              '## 🏗️ AWS Architecture — Initial Diagram Generated',
+              '',
+              'No existing diagram was found. Claude has generated the initial architecture diagram and companion guide from your Terraform files.',
+              '',
+              '---',
+              '',
+              `![Architecture Diagram](${rawBase}/${docsPath}/${diagramName}.png)`,
+              '',
+              `📖 [View companion guide](${blobBase}/${docsPath}/${diagramName}.md) · 🔍 [View workflow run](${runUrl})`,
+            ].join('\n');
+
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body
+            })
+
       - name: Post PR comment
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.initial.outputs.generated != 'true'
         uses: actions/github-script@v7
         env:
           REVIEW_BODY: ${{ steps.claude.outputs.response }}
