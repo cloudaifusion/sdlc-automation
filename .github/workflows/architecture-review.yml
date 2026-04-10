@@ -146,6 +146,7 @@ jobs:
 
       - name: Call Claude for incremental review
         id: claude
+        if: steps.initial.outputs.generated != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           DIAGRAM_XML: ${{ steps.read_files.outputs.xml }}
