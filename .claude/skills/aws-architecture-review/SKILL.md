@@ -1,53 +1,45 @@
 ---
 name: aws-architecture-review
-description: Generate incremental AWS architecture reviews and Draw.io XML updates from Terraform changes.
+description: Review Terraform changes and update AWS architecture diagrams and documentation. Orchestrates the aws-architecture-diagram skill to apply changes.
 user-invocable: true
-argument-hint: "provide parsed Terraform diff JSON and optional existing diagram XML"
+argument-hint: "provide parsed Terraform diff JSON and existing diagram file path"
 ---
 
 # AWS Architecture Review Skill
 
-Inputs:  
-- Parsed Terraform diff (JSON from scripts/get_diff.py)  
-- Existing Draw.io XML (optional)  
-- Existing summary Markdown (optional)
+Inputs:
+- Parsed Terraform diff (JSON from scripts/get_diff.py)
+- Existing Draw.io XML (optional)
+- Existing companion guide Markdown (optional)
 
-Workflow:  
-1. Analyze diff for added/removed/modified high-level AWS services.  
-2. Determine architecture impact (data flow, scaling, security).  
-3. Update the Draw.io diagram — add, modify, or remove nodes and edges to reflect the Terraform changes.
-4. Update the companion guide to reflect the current architecture state.
-5. Produce a review summary of what changed and why.
+## Workflow
 
-## Output 1 — Updated Draw.io diagram
+### 1. Analyze the diff
 
-Write the full updated diagram to `docs/architecture.drawio`.  
-Follow the same icon styles, layout, and conventions defined in the `aws-architecture-diagram` skill.
+Identify which AWS resources were added, modified, or deleted from the Terraform diff JSON.
+Map each resource type to its architectural significance:
+- What service does it represent?
+- What nodes/edges need to be added, updated, or removed from the diagram?
+- What is the impact on data flows, security, or scaling?
 
-## Output 2 — Updated companion guide
+### 2. Delegate to `/aws-architecture-diagram`
 
-Write the updated companion guide to `docs/architecture.md`.  
-The companion guide describes the **current state** of the architecture (not just what changed). Include:
-- **Overview**: 1-2 sentence summary of what the architecture does
-- **Components**: Table of each AWS service, its role, and why it was chosen
-- **Data flows**: Step-by-step explanation of each flow
-- **Key design decisions**: Brief notes on architectural choices
+Invoke the `/aws-architecture-diagram` skill in **update mode**, passing:
+- The existing diagram XML
+- A precise, explicit list of changes to apply:
+  - Nodes to add (service type, label, position hint, parent group)
+  - Nodes to remove (by id)
+  - Edges to add (source, target, label)
+  - Edges to remove (by id)
+  - Any label or style updates
 
-## Output 3 — Review summary
+The diagram skill will apply the changes and regenerate both:
+- The updated `docs/architecture.drawio`
+- A fresh `docs/architecture.md` companion guide reflecting the current state
 
-Write a concise PR review summary covering:
+### 3. Return PR review summary
+
+After the diagram skill completes, return a concise PR review summary as the final text response. This will be posted as a PR comment. Include:
 - What resources were added, modified, or removed
 - Architecture impact (data flow changes, security implications, scaling effects)
-- Any risks or recommendations
-
-Output the review summary as the final text response (it will be posted as a PR comment).
-
-## Output convention for XML
-
-XML updates must be wrapped between:
-
-DIAGRAM_XML_START
-
-<mxCell id="svc-new-lambda" ... />
-
-DIAGRAM_XML_END
+- Any risks or recommendations (e.g. removing a load balancer leaves services without ingress)

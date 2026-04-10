@@ -13,7 +13,36 @@ Generate Draw.io XML architecture diagrams with accurate AWS service icons.
 
 When the user asks to create, update, or generate an AWS architecture diagram in Draw.io format.
 
-## Workflow
+This skill has two modes:
+- **Create mode**: Generate a new diagram from a description or Terraform files
+- **Update mode**: Apply a set of explicit changes to an existing diagram and regenerate the companion guide
+
+---
+
+## Update Mode
+
+Used when called by the `aws-architecture-review` skill with an existing diagram and a list of changes.
+
+### Inputs
+- Existing diagram XML
+- Explicit change list: nodes/edges to add, remove, or update
+
+### Workflow
+1. Parse the existing diagram XML to understand current state
+2. Look up any new icon shapes needed in the reference files
+3. Apply the changes to the XML:
+   - Add new `mxCell` nodes/edges with correct styles and positions
+   - Remove deleted nodes/edges by id
+   - Update labels or styles as specified
+4. Write the full updated diagram to the specified `.drawio` file
+5. Regenerate the companion guide from scratch (section 5b) reflecting the **current state** of the updated diagram — not just what changed
+6. Do NOT ask clarifying questions in update mode — apply changes as instructed
+
+---
+
+## Create Mode
+
+### Workflow
 
 ### 1. Understand the request and confirm preferences
 
