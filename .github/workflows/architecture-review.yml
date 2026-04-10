@@ -117,6 +117,9 @@ jobs:
             echo ""
             echo "Write the updated diagram to ${DRAWIO_FILE}"
             echo "Write the updated companion guide to ${GUIDE_FILE}"
+            echo ""
+            echo "In your PR review summary, wrap any architecture risks or warnings between ### RISKS_START and ### RISKS_END markers."
+            echo "If there are no risks, omit those markers entirely."
           } > prompt.txt
 
           RESPONSE=$(claude -p "$(cat prompt.txt)" --output-format text --dangerously-skip-permissions)
@@ -131,9 +134,24 @@ jobs:
           echo "$RESPONSE"
           echo "=== End Claude Response ==="
 
+          # Extract risks block if present
+          RISKS=$(echo "$RESPONSE" | sed -n '/### RISKS_START/,/### RISKS_END/p' | sed '1d;$d')
+
+          # Strip risks markers from main response for clean display
+          CLEAN_RESPONSE=$(echo "$RESPONSE" | sed '/### RISKS_START/,/### RISKS_END/d')
+
+          # Compute diff stats from diff.json
+          ADDED=$(jq '.resources_added_or_modified | length' diff.json)
+          DELETED=$(jq '.resources_deleted | length' diff.json)
+
           echo "response<<EOF" >> $GITHUB_OUTPUT
-          echo "$RESPONSE" >> $GITHUB_OUTPUT
+          echo "$CLEAN_RESPONSE" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+          echo "risks<<EOF" >> $GITHUB_OUTPUT
+          echo "$RISKS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "added=$ADDED" >> $GITHUB_OUTPUT
+          echo "deleted=$DELETED" >> $GITHUB_OUTPUT
 
       - name: Export diagram to PNG
         run: |
@@ -161,12 +179,46 @@ jobs:
         uses: actions/github-script@v7
         env:
           REVIEW_BODY: ${{ steps.claude.outputs.response }}
+          RISKS: ${{ steps.claude.outputs.risks }}
+          ADDED: ${{ steps.claude.outputs.added }}
+          DELETED: ${{ steps.claude.outputs.deleted }}
           DOCS_PATH: ${{ inputs.docs_path }}
           DIAGRAM_NAME: ${{ inputs.diagram_name }}
         with:
           script: |
+            const added = parseInt(process.env.ADDED) || 0;
+            const deleted = parseInt(process.env.DELETED) || 0;
+            const total = added + deleted;
+            const docsPath = process.env.DOCS_PATH;
+            const diagramName = process.env.DIAGRAM_NAME;
+
+            const statsLine = `**${total} resource(s) changed** — ${added} added/modified, ${deleted} removed`;
+
+            const risksSection = process.env.RISKS?.trim()
+              ? `\n\n### ⚠️ Architecture Risks\n\n${process.env.RISKS.trim()}`
+              : '';
+
+            const body = [
+              '## 🏗️ AWS Architecture Review',
+              '',
+              statsLine,
+              risksSection,
+              '',
+              '---',
+              '',
+              process.env.REVIEW_BODY,
+              '',
+              '---',
+              '',
+              `**Updated diagram:**`,
+              '',
+              `![Architecture Diagram](${docsPath}/${diagramName}.png)`,
+              '',
+              `📖 [View companion guide](${docsPath}/${diagramName}.md)`,
+            ].join('\n');
+
             github.rest.issues.createComment({
               ...context.repo,
               issue_number: context.issue.number,
-              body: `## 🏗️ AWS Architecture Review\n\n${process.env.REVIEW_BODY}\n\n---\n\n**Updated diagram:**\n\n![Architecture Diagram](${process.env.DOCS_PATH}/${process.env.DIAGRAM_NAME}.png)`
+              body
             })
