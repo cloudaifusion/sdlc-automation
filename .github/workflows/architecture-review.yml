@@ -119,7 +119,7 @@ jobs:
             echo "Write the updated companion guide to ${GUIDE_FILE}"
             echo ""
             echo "For your PR review summary:"
-            echo "- Do NOT include any narration about writing files (e.g. 'Both files are written', 'Here is the summary', '---' separators)"
+            echo "- Do NOT include any narration about writing files (e.g. 'Both files are written', 'docs/architecture.drawio and docs/architecture.md are updated', 'Here is the summary', '---' separators)"
             echo "- Start directly with the summary content"
             echo "- Include a Risk column in the resource table (values: HIGH / MEDIUM / LOW / none)"
             echo "- If there are HIGH or MEDIUM risks, wrap a consolidated risks block between ### RISKS_START and ### RISKS_END"
@@ -147,13 +147,15 @@ jobs:
           # Extract risks block if present
           RISKS=$(echo "$RESPONSE" | sed -n '/### RISKS_START/,/### RISKS_END/p' | sed '1d;$d')
 
-          # Strip risks markers and any leading Claude narration lines
+          # Strip risks markers, standalone --- dividers, and any narration lines
+          # (lines that contain file paths or transitional phrases before the actual content)
           CLEAN_RESPONSE=$(echo "$RESPONSE" \
             | sed '/### RISKS_START/,/### RISKS_END/d' \
-            | sed '/^Both files are written/d' \
-            | sed '/^Here is the PR review/d' \
-            | sed '/^Here is the review/d' \
-            | sed '/^---$/d')
+            | sed '/^---$/d' \
+            | sed '/\.drawio.*\.md.*updated/d' \
+            | sed '/^Here is/d' \
+            | sed '/^Both files/d' \
+            | sed '/^The files/d')
 
           # Compute diff stats from diff.json
           ADDED=$(jq '.resources_added_or_modified | length' diff.json)
