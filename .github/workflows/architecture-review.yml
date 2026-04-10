@@ -62,6 +62,7 @@ jobs:
 
           {
             echo "/aws-architecture-diagram"
+            echo "IMPORTANT: This is a CI environment. Do NOT ask any questions. Use English and make sensible defaults for all preferences."
             echo "Generate an AWS architecture diagram from the following Terraform files."
             echo "Write the diagram to ${DRAWIO_FILE} and the companion guide to ${GUIDE_FILE}"
             echo ""

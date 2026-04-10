@@ -49,9 +49,10 @@ Used when called by the `aws-architecture-review` skill with an existing diagram
 - Identify which AWS services are needed
 - Determine the architecture pattern (three-tier, event-driven, data pipeline, RAG, etc.)
 - **Assess the audience**: technical (detailed labels, protocol names) vs non-technical (step numbers, simplified descriptions)
-- **Ask the user** (using AskUserQuestion) for:
+- **If running interactively**, ask the user (using AskUserQuestion) for:
   - **Language**: English or 日本語 for all labels, titles, and the companion guide
   - Any other preferences not already clear from the request
+- **If running in CI** (prompt contains "CI environment" or "do not ask questions"): skip all questions, use English, apply sensible defaults
 
 ### 2. Look up icons
 
