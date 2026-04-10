@@ -295,7 +295,7 @@ jobs:
           git push
 
       - name: Post initial diagram PR comment
-        if: inputs.pr_number != '' && steps.initial.outputs.generated == 'true'
+        if: steps.initial.outputs.generated == 'true'
         uses: actions/github-script@v7
         env:
           DOCS_PATH: ${{ inputs.docs_path }}
@@ -304,6 +304,9 @@ jobs:
           BRANCH: ${{ github.head_ref || github.ref_name }}
         with:
           script: |
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            if (!prNumber) { console.log('No PR number — skipping comment'); return; }
+
             const docsPath = process.env.DOCS_PATH;
             const diagramName = process.env.DIAGRAM_NAME;
             const { owner, repo } = context.repo;
@@ -312,8 +315,6 @@ jobs:
             const rawBase = `https://github.com/${owner}/${repo}/raw/${branch}`;
             const blobBase = `https://github.com/${owner}/${repo}/blob/${branch}`;
             const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
-
-            const resourceCount = parseInt(process.env.ADDED) || 0;
 
             const body = [
               '## 🏗️ AWS Architecture — Initial Diagram Generated',
@@ -329,12 +330,12 @@ jobs:
 
             github.rest.issues.createComment({
               ...context.repo,
-              issue_number: parseInt(process.env.PR_NUMBER),
+              issue_number: prNumber,
               body
             })
 
       - name: Post PR comment
-        if: inputs.pr_number != '' && steps.initial.outputs.generated != 'true'
+        if: steps.initial.outputs.generated != 'true'
         uses: actions/github-script@v7
         env:
           REVIEW_BODY: ${{ steps.claude.outputs.response }}
@@ -347,6 +348,9 @@ jobs:
           BRANCH: ${{ github.head_ref || github.ref_name }}
         with:
           script: |
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            if (!prNumber) { console.log('No PR number — skipping comment'); return; }
+
             const added = parseInt(process.env.ADDED) || 0;
             const deleted = parseInt(process.env.DELETED) || 0;
             const total = added + deleted;
@@ -382,6 +386,6 @@ jobs:
 
             github.rest.issues.createComment({
               ...context.repo,
-              issue_number: parseInt(process.env.PR_NUMBER),
+              issue_number: prNumber,
               body
             })
