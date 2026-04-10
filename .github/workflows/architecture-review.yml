@@ -76,7 +76,19 @@ jobs:
             done
           } > initial_prompt.txt
 
-          claude -p "$(cat initial_prompt.txt)" --output-format text --dangerously-skip-permissions
+          for attempt in 1 2 3; do
+            echo "Claude attempt $attempt..."
+            if claude -p "$(cat initial_prompt.txt)" --output-format text --dangerously-skip-permissions; then
+              break
+            fi
+            if [[ $attempt -lt 3 ]]; then
+              echo "Attempt $attempt failed, waiting 60s before retry..."
+              sleep 60
+            else
+              echo "All attempts failed"
+              exit 1
+            fi
+          done
           rm initial_prompt.txt
 
       - name: Read existing diagram & summary
@@ -159,7 +171,21 @@ jobs:
             echo "- If there are no HIGH or MEDIUM risks, omit the RISKS_START/RISKS_END block entirely"
           } > prompt.txt
 
-          RESPONSE=$(claude -p "$(cat prompt.txt)" --output-format text --dangerously-skip-permissions 2>&1) || true
+          for attempt in 1 2 3; do
+            echo "Claude attempt $attempt..."
+            RESPONSE=$(claude -p "$(cat prompt.txt)" --output-format text --dangerously-skip-permissions 2>&1) || true
+            if echo "$RESPONSE" | grep -qi "rate_limit_error\|rate limit"; then
+              if [[ $attempt -lt 3 ]]; then
+                echo "Rate limited, waiting 60s before retry..."
+                sleep 60
+              else
+                echo "All attempts failed due to rate limiting"
+                exit 1
+              fi
+            else
+              break
+            fi
+          done
 
           if [[ -z "$RESPONSE" ]]; then
             echo "Claude returned empty response"
