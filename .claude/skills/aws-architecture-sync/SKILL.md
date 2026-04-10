@@ -1,0 +1,74 @@
+---
+name: aws-architecture-sync
+description: Sync AWS architecture diagrams with Terraform changes. Orchestrates the aws-architecture-diagram skill to update the diagram and companion guide, then returns a PR review summary.
+user-invocable: true
+argument-hint: "provide parsed Terraform diff JSON and existing diagram file path"
+---
+
+# AWS Architecture Sync Skill
+
+Inputs:
+- Parsed Terraform diff (JSON from scripts/get_diff.py)
+- Existing Draw.io XML (optional)
+- Existing companion guide Markdown (optional)
+
+## Workflow
+
+### 1. Analyze the diff
+
+Identify which AWS resources were added, modified, or deleted from the Terraform diff JSON.
+Map each resource type to its architectural significance:
+- What service does it represent?
+- What nodes/edges need to be added, updated, or removed from the diagram?
+- What is the impact on data flows, security, or scaling?
+
+### 2. Delegate to `/aws-architecture-diagram`
+
+Invoke the `/aws-architecture-diagram` skill in **update mode**, passing:
+- The existing diagram XML
+- A precise, explicit list of changes to apply:
+  - Nodes to add (service type, label, position hint, parent group)
+  - Nodes to remove (by id)
+  - Edges to add (source, target, label)
+  - Edges to remove (by id)
+  - Any label or style updates
+
+The diagram skill will apply the changes and regenerate both:
+- The updated `docs/architecture.drawio`
+- A fresh `docs/architecture.md` companion guide reflecting the current state
+
+### 3. Return PR review summary
+
+After the diagram skill completes, output the PR summary using EXACTLY this format:
+
+1. If there are HIGH or MEDIUM risks, output them first wrapped between `### RISKS_START` and `### RISKS_END`
+2. Then output `### SUMMARY_START` on its own line
+3. Then the summary content — no preamble, no narration, no file confirmation lines
+
+Output the summary using EXACTLY this template (omit any section that has no rows):
+
+```
+## Resources modified (in-place)
+
+| Service | Role | Change | Risk |
+|---|---|---|---|
+| **RDS PostgreSQL** | Document metadata store | Instance configuration update | none |
+
+## Resources force-replaced (destroy + recreate)
+
+| Service | Role | Change | Risk |
+|---|---|---|---|
+| **Application Load Balancer** | TLS termination, path-based routing to Fargate | Destroyed and recreated — DNS name changed | HIGH |
+
+## Resources permanently deleted
+
+| Service | Role | Change | Risk |
+|---|---|---|---|
+| **WAFv2 Web ACL** | L7 filtering (SQLi, XSS, rate-limiting) for the ALB | Deleted with no replacement | HIGH |
+```
+
+Rules:
+- **Role** = what the service does in this architecture — never the change description
+- **Risk** values: HIGH / MEDIUM / LOW / none
+- Omit sections with no rows; do not merge sections into one table
+- No additional prose paragraphs after the tables

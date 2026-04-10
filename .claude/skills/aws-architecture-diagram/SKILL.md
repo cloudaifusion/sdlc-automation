@@ -21,7 +21,7 @@ This skill has two modes:
 
 ## Update Mode
 
-Used when called by the `aws-architecture-review` skill with an existing diagram and a list of changes.
+Used when called by the `aws-architecture-sync` skill with an existing diagram and a list of changes.
 
 ### Inputs
 - Existing diagram XML
