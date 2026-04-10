@@ -138,13 +138,13 @@ jobs:
               echo "$INIT_RESPONSE"
               exit 1
             fi
-            if echo "$INIT_RESPONSE" | grep -qi "rate_limit_error\|rate limit"; then
+            if echo "$INIT_RESPONSE" | grep -qi "rate_limit_error\|rate limit\|overloaded_error\|overloaded"; then
               if [[ $attempt -lt 3 ]]; then
-                echo "Rate limited, waiting 60s before retry..."
+                echo "Attempt $attempt failed (rate limit or overloaded), waiting 60s before retry..."
                 sleep 60
                 continue
               else
-                echo "All attempts failed due to rate limiting"
+                echo "All attempts failed"
                 exit 1
               fi
             fi
@@ -260,12 +260,12 @@ jobs:
           for attempt in 1 2 3; do
             echo "Claude attempt $attempt..."
             RESPONSE=$(claude -p "$(cat prompt.txt)" --output-format text --max-turns 20 --dangerously-skip-permissions 2>&1) || true
-            if echo "$RESPONSE" | grep -qi "rate_limit_error\|rate limit"; then
+            if echo "$RESPONSE" | grep -qi "rate_limit_error\|rate limit\|overloaded_error\|overloaded"; then
               if [[ $attempt -lt 3 ]]; then
-                echo "Rate limited, waiting 60s before retry..."
+                echo "Attempt $attempt failed (rate limit or overloaded), waiting 60s before retry..."
                 sleep 60
               else
-                echo "All attempts failed due to rate limiting"
+                echo "All attempts failed"
                 exit 1
               fi
             else
@@ -278,8 +278,8 @@ jobs:
             exit 1
           fi
 
-          if echo "$RESPONSE" | grep -qi "error\|failed\|unauthorized\|credit\|billing"; then
-            echo "Claude returned an error:"
+          if echo "$RESPONSE" | grep -qi "unauthorized\|credit\|billing\|invalid.*key"; then
+            echo "Claude returned a fatal error:"
             echo "$RESPONSE"
             exit 1
           fi
