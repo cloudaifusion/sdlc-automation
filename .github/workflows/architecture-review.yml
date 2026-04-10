@@ -159,9 +159,19 @@ jobs:
           DRAWIO_VERSION="24.7.17"
           wget -q "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb"
           sudo dpkg -i "drawio-amd64-${DRAWIO_VERSION}.deb" || sudo apt-get install -f -y
+          PNG_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.png"
+          DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
+
           xvfb-run -a drawio --export --format png \
-            --output "${{ inputs.docs_path }}/${{ inputs.diagram_name }}.png" \
-            --no-sandbox "${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
+            --output "$PNG_FILE" \
+            --no-sandbox "$DRAWIO_FILE"
+
+          if [[ ! -f "$PNG_FILE" ]]; then
+            echo "ERROR: PNG export failed — $PNG_FILE was not created"
+            ls -la "${{ inputs.docs_path }}/"
+            exit 1
+          fi
+          echo "PNG export succeeded: $PNG_FILE ($(du -h "$PNG_FILE" | cut -f1))"
 
       - name: Commit updated diagram and review
         run: |
