@@ -161,10 +161,12 @@ jobs:
         uses: actions/github-script@v7
         env:
           REVIEW_BODY: ${{ steps.claude.outputs.response }}
+          DOCS_PATH: ${{ inputs.docs_path }}
+          DIAGRAM_NAME: ${{ inputs.diagram_name }}
         with:
           script: |
             github.rest.issues.createComment({
               ...context.repo,
               issue_number: context.issue.number,
-              body: `## 🏗️ AWS Architecture Review\n\n${process.env.REVIEW_BODY}`
+              body: `## 🏗️ AWS Architecture Review\n\n${process.env.REVIEW_BODY}\n\n---\n\n**Updated diagram:**\n\n![Architecture Diagram](${process.env.DOCS_PATH}/${process.env.DIAGRAM_NAME}.png)`
             })
