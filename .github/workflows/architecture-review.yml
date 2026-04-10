@@ -268,7 +268,7 @@ jobs:
 
           for attempt in 1 2 3; do
             echo "Claude attempt $attempt..."
-            RESPONSE=$(claude -p "$(cat prompt.txt)" --model claude-haiku-4-5-20251001 --output-format text --max-turns 20 --dangerously-skip-permissions 2>&1) || true
+            RESPONSE=$(claude -p "$(cat prompt.txt)" --output-format text --max-turns 20 --dangerously-skip-permissions 2>&1) || true
             if echo "$RESPONSE" | grep -qi "rate_limit_error\|rate limit"; then
               if [[ $attempt -lt 3 ]]; then
                 echo "Rate limited, waiting 60s before retry..."
