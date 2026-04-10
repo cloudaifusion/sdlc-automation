@@ -122,10 +122,16 @@ jobs:
             echo "If there are no risks, omit those markers entirely."
           } > prompt.txt
 
-          RESPONSE=$(claude -p "$(cat prompt.txt)" --output-format text --dangerously-skip-permissions)
+          RESPONSE=$(claude -p "$(cat prompt.txt)" --output-format text --dangerously-skip-permissions 2>&1) || true
 
           if [[ -z "$RESPONSE" ]]; then
             echo "Claude returned empty response"
+            exit 1
+          fi
+
+          if echo "$RESPONSE" | grep -qi "error\|failed\|unauthorized\|credit\|billing"; then
+            echo "Claude returned an error:"
+            echo "$RESPONSE"
             exit 1
           fi
 
