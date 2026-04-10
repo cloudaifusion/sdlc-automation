@@ -71,6 +71,17 @@ jobs:
 
           REFS_DIR="/tmp/sdlc-automation/.claude/skills/aws-architecture-diagram/references"
           TEMPLATE="/tmp/sdlc-automation/.claude/skills/aws-architecture-diagram/templates/base.drawio.xml"
+          TF_CONTENT=$(find "${{ inputs.terraform_path }}" -name "*.tf" | xargs cat 2>/dev/null)
+
+          # Determine which icon reference files are needed based on resource types present
+          REFS="common"
+          echo "$TF_CONTENT" | grep -q 'aws_\(instance\|lambda\|ecs\|eks\|fargate\|lb\|alb\|nlb\|autoscaling\|batch\)' && REFS="$REFS compute"
+          echo "$TF_CONTENT" | grep -q 'aws_\(s3\|rds\|db_\|dynamodb\|elasticache\|ebs\|efs\|fsx\|backup\)' && REFS="$REFS storage-database"
+          echo "$TF_CONTENT" | grep -q 'aws_\(vpc\|subnet\|route\|cloudfront\|route53\|api_gateway\|apigatewayv2\|nat\|internet_gateway\|security_group\|network\)' && REFS="$REFS networking"
+          echo "$TF_CONTENT" | grep -q 'aws_\(sns\|sqs\|eventbridge\|cloudwatch\|sfn\|scheduler\|pipes\|cloudformation\)' && REFS="$REFS app-integration"
+          echo "$TF_CONTENT" | grep -q 'aws_\(athena\|glue\|kinesis\|opensearch\|bedrock\|sagemaker\|emr\|redshift\)' && REFS="$REFS analytics-ml"
+          echo "$TF_CONTENT" | grep -q 'aws_\(iam\|cognito\|waf\|shield\|kms\|guardduty\|acm\|secretsmanager\|ssm\)' && REFS="$REFS security"
+          echo "Icon reference categories needed: $REFS"
 
           {
             echo "/aws-architecture-diagram"
@@ -85,7 +96,7 @@ jobs:
             cat "${REFS_DIR}/layout-guidelines.md"
             echo "=== END DATA: layout-guidelines ==="
             echo ""
-            for ref in compute storage-database networking app-integration analytics-ml security common; do
+            for ref in $REFS; do
               echo "=== BEGIN DATA: aws-icons-${ref} ==="
               cat "${REFS_DIR}/aws-icons-${ref}.md"
               echo "=== END DATA: aws-icons-${ref} ==="
