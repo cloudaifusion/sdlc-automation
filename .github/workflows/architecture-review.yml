@@ -204,7 +204,7 @@ jobs:
             const { owner, repo } = context.repo;
             const branch = context.payload.pull_request.head.ref;
 
-            const rawBase = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}`;
+            const rawBase = `https://github.com/${owner}/${repo}/raw/${branch}`;
             const blobBase = `https://github.com/${owner}/${repo}/blob/${branch}`;
 
             const statsLine = `**${total} resource(s) changed** — ${added} added/modified, ${deleted} removed`;
