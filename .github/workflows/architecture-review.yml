@@ -179,7 +179,7 @@ jobs:
           for attempt in 1 2 3; do
             echo "Claude attempt $attempt..."
             INIT_RESPONSE=$(claude -p "$(cat initial_prompt.txt)" $CLAUDE_MODEL_FLAG --output-format text --max-turns 10 --dangerously-skip-permissions 2>&1) || true
-            if echo "$INIT_RESPONSE" | grep -qi "not logged in\|please run /login\|credit\|billing\|unauthorized\|invalid.*key\|not available on your bedrock"; then
+            if echo "$INIT_RESPONSE" | grep -qi "not logged in\|please run /login\|authentication_error\|invalid bearer token\|api error.*401\|credit\|billing\|unauthorized\|invalid.*key\|not available on your bedrock"; then
               echo "Fatal error — auth or model availability issue:"
               echo "$INIT_RESPONSE"
               exit 1
@@ -350,7 +350,7 @@ jobs:
             exit 1
           fi
 
-          if echo "$RESPONSE" | grep -qi "not logged in\|please run /login\|unauthorized\|credit\|billing\|invalid.*key\|not available on your bedrock"; then
+          if echo "$RESPONSE" | grep -qi "not logged in\|please run /login\|authentication_error\|invalid bearer token\|api error.*401\|unauthorized\|credit\|billing\|invalid.*key\|not available on your bedrock"; then
             echo "Claude returned a fatal error:"
             echo "$RESPONSE"
             exit 1
