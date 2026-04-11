@@ -102,10 +102,14 @@ jobs:
           CLAUDE_MODEL_FLAG=""
           if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
             unset ANTHROPIC_API_KEY
+            echo "Auth: Claude.ai subscription (OAuth token)"
           elif [[ -n "$AWS_ACCESS_KEY_ID" ]]; then
             unset ANTHROPIC_API_KEY
             export CLAUDE_CODE_USE_BEDROCK=1
             CLAUDE_MODEL_FLAG="--model ${{ inputs.aws_bedrock_model }}"
+            echo "Auth: AWS Bedrock (${{ inputs.aws_region }}, model: ${{ inputs.aws_bedrock_model }})"
+          else
+            echo "Auth: Anthropic API key"
           fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
@@ -221,10 +225,14 @@ jobs:
           CLAUDE_MODEL_FLAG=""
           if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
             unset ANTHROPIC_API_KEY
+            echo "Auth: Claude.ai subscription (OAuth token)"
           elif [[ -n "$AWS_ACCESS_KEY_ID" ]]; then
             unset ANTHROPIC_API_KEY
             export CLAUDE_CODE_USE_BEDROCK=1
             CLAUDE_MODEL_FLAG="--model ${{ inputs.aws_bedrock_model }}"
+            echo "Auth: AWS Bedrock (${{ inputs.aws_region }}, model: ${{ inputs.aws_bedrock_model }})"
+          else
+            echo "Auth: Anthropic API key"
           fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
