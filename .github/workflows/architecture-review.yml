@@ -23,13 +23,13 @@ on:
         required: false
         type: string
       aws_region:
-        description: 'AWS region for Bedrock (e.g. us-west-2)'
-        default: 'us-west-2'
+        description: 'AWS region for Bedrock (e.g. eu-west-2)'
+        default: 'eu-west-2'
         required: false
         type: string
       aws_bedrock_model:
-        description: 'Bedrock cross-region inference profile ID (e.g. us.anthropic.claude-sonnet-4-5-20250929-v1:0)'
-        default: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0'
+        description: 'Bedrock cross-region inference profile ID (e.g. eu.anthropic.claude-sonnet-4-6)'
+        default: 'eu.anthropic.claude-sonnet-4-6'
         required: false
         type: string
       aws_role_arn:
@@ -64,19 +64,6 @@ jobs:
         with:
           role-to-assume: ${{ inputs.aws_role_arn }}
           aws-region: ${{ inputs.aws_region }}
-
-      - name: List available Bedrock Claude inference profiles
-        if: inputs.aws_role_arn != ''
-        continue-on-error: true
-        run: |
-          echo "=== Available Claude inference profiles ==="
-          aws bedrock list-inference-profiles \
-            --query "inferenceProfileSummaries[?contains(inferenceProfileId, 'claude')].{id:inferenceProfileId,name:inferenceProfileName,status:status}" \
-            --output table 2>&1 || echo "list-inference-profiles not supported, trying list-foundation-models..."
-          echo "=== Available Claude foundation models ==="
-          aws bedrock list-foundation-models \
-            --query "modelSummaries[?contains(modelId, 'claude')].modelId" \
-            --output text 2>&1
 
       - name: Cache drawio .deb
         id: cache-drawio
@@ -237,7 +224,6 @@ jobs:
           elif [[ -n "$AWS_ACCESS_KEY_ID" ]]; then
             unset ANTHROPIC_API_KEY
             export CLAUDE_CODE_USE_BEDROCK=1
-            export AWS_REGION="${{ inputs.aws_region }}"
             CLAUDE_MODEL_FLAG="--model ${{ inputs.aws_bedrock_model }}"
           fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
