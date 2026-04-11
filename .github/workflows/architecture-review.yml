@@ -73,8 +73,8 @@ jobs:
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
 
-          if [[ -f "$DRAWIO_FILE" ]]; then
-            echo "Diagram already exists, skipping initial generation."
+          if git show origin/main:"${DRAWIO_FILE}" > /dev/null 2>&1; then
+            echo "Diagram exists on main, skipping initial generation."
             echo "generated=false" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -160,8 +160,8 @@ jobs:
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
 
-          XML=$(cat "$DRAWIO_FILE" 2>/dev/null || echo "")
-          SUMMARY=$(cat "$GUIDE_FILE" 2>/dev/null || echo "")
+          XML=$(git show origin/main:"${DRAWIO_FILE}" 2>/dev/null || echo "")
+          SUMMARY=$(git show origin/main:"${GUIDE_FILE}" 2>/dev/null || echo "")
 
           DELIM=$(uuidgen)
           echo "xml<<${DELIM}" >> $GITHUB_OUTPUT
