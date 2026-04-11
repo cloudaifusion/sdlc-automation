@@ -65,6 +65,18 @@ jobs:
           role-to-assume: ${{ inputs.aws_role_arn }}
           aws-region: ${{ inputs.aws_region }}
 
+      - name: List available Bedrock Claude inference profiles
+        if: inputs.aws_role_arn != ''
+        run: |
+          echo "=== Available Claude inference profiles ==="
+          aws bedrock list-inference-profiles \
+            --query "inferenceProfileSummaries[?contains(inferenceProfileId, 'claude')].{id:inferenceProfileId,name:inferenceProfileName,status:status}" \
+            --output table 2>&1 || echo "list-inference-profiles not supported, trying list-foundation-models..."
+          echo "=== Available Claude foundation models ==="
+          aws bedrock list-foundation-models \
+            --query "modelSummaries[?contains(modelId, 'claude')].modelId" \
+            --output text 2>&1
+
       - name: Cache drawio .deb
         id: cache-drawio
         uses: actions/cache@v4
