@@ -67,6 +67,7 @@ jobs:
 
       - name: List available Bedrock Claude inference profiles
         if: inputs.aws_role_arn != ''
+        continue-on-error: true
         run: |
           echo "=== Available Claude inference profiles ==="
           aws bedrock list-inference-profiles \
