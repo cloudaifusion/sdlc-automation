@@ -32,13 +32,17 @@ on:
         required: false
       CLAUDE_CODE_OAUTH_TOKEN:
         required: false
-      AWS_BEARER_TOKEN_BEDROCK:
+      AWS_ROLE_ARN:
         required: false
 
 jobs:
   architecture-review:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -46,6 +50,13 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.head_ref || github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials for Bedrock
+        if: ${{ secrets.AWS_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ inputs.aws_region }}
 
       - name: Cache drawio .deb
         id: cache-drawio
@@ -79,14 +90,13 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
-          AWS_REGION: ${{ inputs.aws_region }}
         run: |
           if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
             unset ANTHROPIC_API_KEY
-          elif [[ -n "$AWS_BEARER_TOKEN_BEDROCK" ]]; then
+          elif [[ -n "$AWS_ACCESS_KEY_ID" ]]; then
             unset ANTHROPIC_API_KEY
             export CLAUDE_CODE_USE_BEDROCK=1
+            export AWS_REGION="${{ inputs.aws_region }}"
             export ANTHROPIC_DEFAULT_SONNET_MODEL="us.anthropic.claude-sonnet-4-6"
           fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
@@ -198,14 +208,13 @@ jobs:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           DIAGRAM_XML: ${{ steps.read_files.outputs.xml }}
           DIAGRAM_SUMMARY: ${{ steps.read_files.outputs.summary }}
-          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
-          AWS_REGION: ${{ inputs.aws_region }}
         run: |
           if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
             unset ANTHROPIC_API_KEY
-          elif [[ -n "$AWS_BEARER_TOKEN_BEDROCK" ]]; then
+          elif [[ -n "$AWS_ACCESS_KEY_ID" ]]; then
             unset ANTHROPIC_API_KEY
             export CLAUDE_CODE_USE_BEDROCK=1
+            export AWS_REGION="${{ inputs.aws_region }}"
             export ANTHROPIC_DEFAULT_SONNET_MODEL="us.anthropic.claude-sonnet-4-6"
           fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
