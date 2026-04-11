@@ -27,6 +27,11 @@ on:
         default: 'us-east-1'
         required: false
         type: string
+      aws_bedrock_model:
+        description: 'Bedrock cross-region inference profile ID (e.g. us.anthropic.claude-sonnet-4-5-20250929-v1:0)'
+        default: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0'
+        required: false
+        type: string
       aws_role_arn:
         description: 'IAM role ARN to assume for Bedrock access (via GitHub OIDC)'
         required: false
@@ -99,7 +104,7 @@ jobs:
             unset ANTHROPIC_API_KEY
             export CLAUDE_CODE_USE_BEDROCK=1
             export AWS_REGION="${{ inputs.aws_region }}"
-            export ANTHROPIC_DEFAULT_SONNET_MODEL="anthropic.claude-sonnet-4-6"
+            export ANTHROPIC_DEFAULT_SONNET_MODEL="${{ inputs.aws_bedrock_model }}"
           fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
@@ -217,7 +222,7 @@ jobs:
             unset ANTHROPIC_API_KEY
             export CLAUDE_CODE_USE_BEDROCK=1
             export AWS_REGION="${{ inputs.aws_region }}"
-            export ANTHROPIC_DEFAULT_SONNET_MODEL="anthropic.claude-sonnet-4-6"
+            export ANTHROPIC_DEFAULT_SONNET_MODEL="${{ inputs.aws_bedrock_model }}"
           fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
