@@ -27,12 +27,14 @@ on:
         default: 'us-east-1'
         required: false
         type: string
+      aws_role_arn:
+        description: 'IAM role ARN to assume for Bedrock access (via GitHub OIDC)'
+        required: false
+        type: string
     secrets:
       ANTHROPIC_API_KEY:
         required: false
       CLAUDE_CODE_OAUTH_TOKEN:
-        required: false
-      AWS_ROLE_ARN:
         required: false
 
 jobs:
@@ -52,10 +54,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure AWS credentials for Bedrock
-        if: ${{ secrets.AWS_ROLE_ARN != '' }}
+        if: inputs.aws_role_arn != ''
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ inputs.aws_role_arn }}
           aws-region: ${{ inputs.aws_region }}
 
       - name: Cache drawio .deb
