@@ -338,7 +338,6 @@ jobs:
             exit 1
           fi
 
-          echo "$RESPONSE" > review-output.txt
           echo "=== Claude Response ==="
           echo "$RESPONSE"
           echo "=== End Claude Response ==="
@@ -396,8 +395,7 @@ jobs:
           git add \
             "${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio" \
             "${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md" \
-            "${{ inputs.docs_path }}/${{ inputs.diagram_name }}.png" \
-            review-output.txt
+            "${{ inputs.docs_path }}/${{ inputs.diagram_name }}.png"
           git commit -m "Auto-update AWS diagram via architecture-review skill" || echo "No changes to commit"
           git push
 
