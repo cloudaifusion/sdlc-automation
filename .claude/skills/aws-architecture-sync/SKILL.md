@@ -48,6 +48,12 @@ After the diagram skill completes, output the PR summary using EXACTLY this temp
 
 ### SUMMARY_START
 
+## Resources added
+
+| Service | Role | Risk |
+|---|---|---|
+| **WAFv2 Web ACL** | L7 filtering (SQLi, XSS, rate-limiting) in front of the ALB | none |
+
 ## Resources modified (in-place)
 
 | Service | Role | Change | Risk |
@@ -62,15 +68,20 @@ After the diagram skill completes, output the PR summary using EXACTLY this temp
 
 ## Resources permanently deleted
 
-| Service | Role | Change | Risk |
-|---|---|---|---|
-| **WAFv2 Web ACL** | L7 filtering (SQLi, XSS, rate-limiting) for the ALB | Deleted with no replacement | HIGH |
+| Service | Role | Risk |
+|---|---|---|
+| **WAFv2 Web ACL** | L7 filtering (SQLi, XSS, rate-limiting) for the ALB | HIGH |
 ```
 
 If there are no HIGH or MEDIUM risks, omit the `### RISKS_START` / `### RISKS_END` block entirely.
 
 Rules:
+- **Added** = new resources not present in the base branch terraform; no "Change" column needed
+- **Modified** = resources that existed in the base branch and have configuration changes
+- **Force-replaced** = resources where Terraform will destroy and recreate (e.g. name/identifier changes)
+- **Deleted** = resources removed entirely; no "Change" column needed
 - **Role** = what the service does in this architecture — never the change description
 - **Risk** values: HIGH / MEDIUM / LOW / none
 - Omit sections with no rows; do not merge sections into one table
 - No additional prose paragraphs after the tables
+- Do NOT write "already up to date" or similar prose — if there are no diagram changes, still output the summary tables
