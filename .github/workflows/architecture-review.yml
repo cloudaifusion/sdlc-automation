@@ -73,6 +73,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
+          if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then unset ANTHROPIC_API_KEY; fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
 
@@ -183,6 +184,7 @@ jobs:
           DIAGRAM_XML: ${{ steps.read_files.outputs.xml }}
           DIAGRAM_SUMMARY: ${{ steps.read_files.outputs.summary }}
         run: |
+          if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then unset ANTHROPIC_API_KEY; fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
 
