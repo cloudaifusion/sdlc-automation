@@ -23,8 +23,8 @@ on:
         required: false
         type: string
       aws_region:
-        description: 'AWS region for Bedrock (e.g. us-east-1)'
-        default: 'us-east-1'
+        description: 'AWS region for Bedrock (e.g. us-west-2)'
+        default: 'us-west-2'
         required: false
         type: string
       aws_bedrock_model:
@@ -111,13 +111,14 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
+          CLAUDE_MODEL_FLAG=""
           if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
             unset ANTHROPIC_API_KEY
           elif [[ -n "$AWS_ACCESS_KEY_ID" ]]; then
             unset ANTHROPIC_API_KEY
             export CLAUDE_CODE_USE_BEDROCK=1
             export AWS_REGION="${{ inputs.aws_region }}"
-            export ANTHROPIC_DEFAULT_SONNET_MODEL="${{ inputs.aws_bedrock_model }}"
+            CLAUDE_MODEL_FLAG="--model ${{ inputs.aws_bedrock_model }}"
           fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
@@ -181,7 +182,7 @@ jobs:
 
           for attempt in 1 2 3; do
             echo "Claude attempt $attempt..."
-            INIT_RESPONSE=$(claude -p "$(cat initial_prompt.txt)" --output-format text --max-turns 10 --dangerously-skip-permissions 2>&1) || true
+            INIT_RESPONSE=$(claude -p "$(cat initial_prompt.txt)" $CLAUDE_MODEL_FLAG --output-format text --max-turns 10 --dangerously-skip-permissions 2>&1) || true
             if echo "$INIT_RESPONSE" | grep -qi "credit\|billing\|unauthorized\|invalid.*key\|not available on your bedrock"; then
               echo "Fatal error — auth or model availability issue:"
               echo "$INIT_RESPONSE"
@@ -229,13 +230,14 @@ jobs:
           DIAGRAM_XML: ${{ steps.read_files.outputs.xml }}
           DIAGRAM_SUMMARY: ${{ steps.read_files.outputs.summary }}
         run: |
+          CLAUDE_MODEL_FLAG=""
           if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
             unset ANTHROPIC_API_KEY
           elif [[ -n "$AWS_ACCESS_KEY_ID" ]]; then
             unset ANTHROPIC_API_KEY
             export CLAUDE_CODE_USE_BEDROCK=1
             export AWS_REGION="${{ inputs.aws_region }}"
-            export ANTHROPIC_DEFAULT_SONNET_MODEL="${{ inputs.aws_bedrock_model }}"
+            CLAUDE_MODEL_FLAG="--model ${{ inputs.aws_bedrock_model }}"
           fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
@@ -324,7 +326,7 @@ jobs:
 
           for attempt in 1 2 3; do
             echo "Claude attempt $attempt..."
-            RESPONSE=$(claude -p "$(cat prompt.txt)" --output-format text --max-turns 20 --dangerously-skip-permissions 2>&1) || true
+            RESPONSE=$(claude -p "$(cat prompt.txt)" $CLAUDE_MODEL_FLAG --output-format text --max-turns 20 --dangerously-skip-permissions 2>&1) || true
             if echo "$RESPONSE" | grep -qi "rate_limit_error\|rate limit\|overloaded_error\|overloaded"; then
               if [[ $attempt -lt 3 ]]; then
                 echo "Attempt $attempt failed (rate limit or overloaded), waiting 60s before retry..."
