@@ -1,4 +1,4 @@
-name: AWS Architecture Review
+name: AWS Architecture Sync
 
 on:
   workflow_call:
