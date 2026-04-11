@@ -36,6 +36,11 @@ on:
         description: 'IAM role ARN to assume for Bedrock access (via GitHub OIDC)'
         required: false
         type: string
+      use_bedrock:
+        description: 'Set to true to authenticate via AWS Bedrock (requires aws_role_arn and id-token: write)'
+        default: 'false'
+        required: false
+        type: string
     secrets:
       ANTHROPIC_API_KEY:
         required: false
