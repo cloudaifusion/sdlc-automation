@@ -22,10 +22,17 @@ on:
         description: 'PR number to post comment to (omit for non-PR runs)'
         required: false
         type: string
+      aws_region:
+        description: 'AWS region for Bedrock (e.g. us-east-1)'
+        default: 'us-east-1'
+        required: false
+        type: string
     secrets:
       ANTHROPIC_API_KEY:
         required: false
       CLAUDE_CODE_OAUTH_TOKEN:
+        required: false
+      AWS_BEARER_TOKEN_BEDROCK:
         required: false
 
 jobs:
@@ -72,8 +79,16 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          AWS_REGION: ${{ inputs.aws_region }}
         run: |
-          if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then unset ANTHROPIC_API_KEY; fi
+          if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
+            unset ANTHROPIC_API_KEY
+          elif [[ -n "$AWS_BEARER_TOKEN_BEDROCK" ]]; then
+            unset ANTHROPIC_API_KEY
+            export CLAUDE_CODE_USE_BEDROCK=1
+            export ANTHROPIC_DEFAULT_SONNET_MODEL="us.anthropic.claude-sonnet-4-6"
+          fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
 
@@ -183,8 +198,16 @@ jobs:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           DIAGRAM_XML: ${{ steps.read_files.outputs.xml }}
           DIAGRAM_SUMMARY: ${{ steps.read_files.outputs.summary }}
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          AWS_REGION: ${{ inputs.aws_region }}
         run: |
-          if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then unset ANTHROPIC_API_KEY; fi
+          if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
+            unset ANTHROPIC_API_KEY
+          elif [[ -n "$AWS_BEARER_TOKEN_BEDROCK" ]]; then
+            unset ANTHROPIC_API_KEY
+            export CLAUDE_CODE_USE_BEDROCK=1
+            export ANTHROPIC_DEFAULT_SONNET_MODEL="us.anthropic.claude-sonnet-4-6"
+          fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
 
