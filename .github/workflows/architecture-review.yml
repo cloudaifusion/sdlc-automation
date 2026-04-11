@@ -99,7 +99,7 @@ jobs:
             unset ANTHROPIC_API_KEY
             export CLAUDE_CODE_USE_BEDROCK=1
             export AWS_REGION="${{ inputs.aws_region }}"
-            export ANTHROPIC_DEFAULT_SONNET_MODEL="us.anthropic.claude-sonnet-4-5-20250929"
+            export ANTHROPIC_DEFAULT_SONNET_MODEL="anthropic.claude-sonnet-4-6"
           fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
@@ -217,7 +217,7 @@ jobs:
             unset ANTHROPIC_API_KEY
             export CLAUDE_CODE_USE_BEDROCK=1
             export AWS_REGION="${{ inputs.aws_region }}"
-            export ANTHROPIC_DEFAULT_SONNET_MODEL="us.anthropic.claude-sonnet-4-5-20250929"
+            export ANTHROPIC_DEFAULT_SONNET_MODEL="anthropic.claude-sonnet-4-6"
           fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
