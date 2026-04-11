@@ -99,7 +99,7 @@ jobs:
             unset ANTHROPIC_API_KEY
             export CLAUDE_CODE_USE_BEDROCK=1
             export AWS_REGION="${{ inputs.aws_region }}"
-            export ANTHROPIC_DEFAULT_SONNET_MODEL="us.anthropic.claude-sonnet-4-6"
+            export ANTHROPIC_DEFAULT_SONNET_MODEL="us.anthropic.claude-sonnet-4-5-20250929"
           fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
@@ -164,8 +164,8 @@ jobs:
           for attempt in 1 2 3; do
             echo "Claude attempt $attempt..."
             INIT_RESPONSE=$(claude -p "$(cat initial_prompt.txt)" --output-format text --max-turns 10 --dangerously-skip-permissions 2>&1) || true
-            if echo "$INIT_RESPONSE" | grep -qi "credit\|billing\|unauthorized\|invalid.*key"; then
-              echo "Fatal error — credits or auth issue:"
+            if echo "$INIT_RESPONSE" | grep -qi "credit\|billing\|unauthorized\|invalid.*key\|not available on your bedrock"; then
+              echo "Fatal error — auth or model availability issue:"
               echo "$INIT_RESPONSE"
               exit 1
             fi
@@ -217,7 +217,7 @@ jobs:
             unset ANTHROPIC_API_KEY
             export CLAUDE_CODE_USE_BEDROCK=1
             export AWS_REGION="${{ inputs.aws_region }}"
-            export ANTHROPIC_DEFAULT_SONNET_MODEL="us.anthropic.claude-sonnet-4-6"
+            export ANTHROPIC_DEFAULT_SONNET_MODEL="us.anthropic.claude-sonnet-4-5-20250929"
           fi
           DRAWIO_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.drawio"
           GUIDE_FILE="${{ inputs.docs_path }}/${{ inputs.diagram_name }}.md"
@@ -325,7 +325,7 @@ jobs:
             exit 1
           fi
 
-          if echo "$RESPONSE" | grep -qi "unauthorized\|credit\|billing\|invalid.*key"; then
+          if echo "$RESPONSE" | grep -qi "unauthorized\|credit\|billing\|invalid.*key\|not available on your bedrock"; then
             echo "Claude returned a fatal error:"
             echo "$RESPONSE"
             exit 1
