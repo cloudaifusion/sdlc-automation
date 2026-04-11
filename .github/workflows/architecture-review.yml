@@ -37,7 +37,7 @@ on:
         required: false
         type: string
       use_bedrock:
-        description: 'Set to true to use AWS Bedrock instead of Anthropic API or OAuth token'
+        description: 'Auto-set by caller — true when no OAuth token or API key is configured'
         default: 'false'
         required: false
         type: string
@@ -64,7 +64,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure AWS credentials for Bedrock
-        if: inputs.use_bedrock == 'true'
+        if: inputs.use_bedrock == 'true' && inputs.aws_role_arn != ''
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.aws_role_arn }}
