@@ -36,11 +36,6 @@ on:
         description: 'IAM role ARN to assume for Bedrock access (via GitHub OIDC)'
         required: false
         type: string
-      use_bedrock:
-        description: 'Auto-set by caller — true when no OAuth token or API key is configured'
-        default: 'false'
-        required: false
-        type: string
     secrets:
       ANTHROPIC_API_KEY:
         required: false
@@ -64,7 +59,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure AWS credentials for Bedrock
-        if: inputs.use_bedrock == 'true' && inputs.aws_role_arn != ''
+        if: inputs.use_bedrock == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.aws_role_arn }}
